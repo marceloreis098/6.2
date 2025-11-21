@@ -494,6 +494,13 @@ app.post('/api/equipment/periodic-update', async (req, res) => {
         await connection.query('INSERT INTO audit_log (username, action_type, target_type, details, timestamp) VALUES (?, ?, ?, ?, NOW())', 
             [username, 'UPDATE', 'EQUIPMENT', `Atualização periódica de ${equipmentList.length} itens`]);
 
+        // Update last update timestamp
+        const now = new Date().toISOString();
+        await connection.query(
+            'INSERT INTO app_config (config_key, config_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE config_value = ?',
+            ['lastAbsoluteUpdateTimestamp', now, now]
+        );
+
         await connection.commit();
         res.json({ success: true, message: 'Atualização periódica concluída com sucesso.' });
     } catch (error) {
@@ -535,6 +542,17 @@ app.post('/api/equipment/import', async (req, res) => {
 
         await connection.query('INSERT INTO audit_log (username, action_type, target_type, details, timestamp) VALUES (?, ?, ?, ?, NOW())', 
             [username, 'DELETE', 'DATABASE', 'Substituição total do inventário via consolidação']);
+
+        // Update settings
+        const now = new Date().toISOString();
+        await connection.query(
+            'INSERT INTO app_config (config_key, config_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE config_value = ?',
+            ['lastAbsoluteUpdateTimestamp', now, now]
+        );
+        await connection.query(
+            'INSERT INTO app_config (config_key, config_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE config_value = ?',
+            ['hasInitialConsolidationRun', 'true', 'true']
+        );
 
         await connection.commit();
         res.json({ success: true, message: 'Inventário consolidado com sucesso.' });
